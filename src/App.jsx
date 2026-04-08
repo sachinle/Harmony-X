@@ -13,6 +13,7 @@ import Player from './components/Player/Player'
 import BottomNav from './components/Navigation/BottomNav'
 import NowPlaying from './pages/NowPlaying'
 import { Toaster } from 'react-hot-toast'
+import { Analytics } from "@vercel/analytics/react";
 
 function App() {
   const dispatch = useDispatch()
@@ -102,6 +103,7 @@ function App() {
           success: { iconTheme: { primary: '#1DB954', secondary: '#000' } },
         }}
       />
+      <Analytics />
     </div>
   )
 }
