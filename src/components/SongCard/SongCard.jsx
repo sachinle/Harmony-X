@@ -1,84 +1,89 @@
-// src/components/SongCard/SongCard.jsx
 import React, { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Play, Pause, Download, MoreHorizontal, Check } from 'lucide-react'
-import { setCurrentSong, setCurrentPlaylist, setIsPlaying } from '../../store/slices/playerSlice'
-import { cacheAudioFile, isSongCached } from '../../services/cacheService'
+import { Play, Pause, Heart } from 'lucide-react'
+import { playSongFromPlaylist } from '../../store/slices/playerSlice'
+import { addLikedSong, removeLikedSong } from '../../store/slices/librarySlice'
+import { likeSong, unlikeSong } from '../../services/supabase'
 import toast from 'react-hot-toast'
 
 const SongCard = ({ song, playlist = null, index = 0 }) => {
   const dispatch = useDispatch()
   const { currentSong, isPlaying } = useSelector((state) => state.player)
-  const [isCached, setIsCached] = useState(false)
-  const [isDownloading, setIsDownloading] = useState(false)
+  const { user } = useSelector((state) => state.user)
+  const { likedSongIds } = useSelector((state) => state.library)
+  const [likeLoading, setLikeLoading] = useState(false)
 
   const isCurrentSong = currentSong?.id === song.id
+  const isLiked       = likedSongIds.includes(song.id)
 
   const handlePlay = () => {
-    if (playlist) {
-      dispatch(setCurrentPlaylist(playlist))
-      dispatch(setCurrentSong(song))
-      dispatch(setIsPlaying(true))
-    } else {
-      dispatch(setCurrentSong(song))
-      dispatch(setIsPlaying(true))
-    }
+    const pl  = playlist || [song]
+    const idx = playlist ? index : 0
+    dispatch(playSongFromPlaylist({ song, playlist: pl, index: idx }))
   }
 
-  const handleDownload = async () => {
-    setIsDownloading(true)
+  const handleLike = async (e) => {
+    e.stopPropagation()
+    if (!user) { toast.error('Please log in to like songs'); return }
+    setLikeLoading(true)
     try {
-      await cacheAudioFile(song.id, song.audioUrl_128, 3)
-      setIsCached(true)
-      toast.success(`${song.title} saved offline!`)
-    } catch (error) {
-      toast.error('Failed to cache song')
+      if (isLiked) {
+        await unlikeSong(user.uid, song.id)
+        dispatch(removeLikedSong(song.id))
+      } else {
+        await likeSong(user.uid, song.id)
+        dispatch(addLikedSong(song))
+        toast.success(`Added "${song.title}" to Liked Songs`)
+      }
+    } catch {
+      toast.error('Could not update liked songs')
     } finally {
-      setIsDownloading(false)
+      setLikeLoading(false)
     }
   }
-
-  React.useEffect(() => {
-    const checkCache = async () => {
-      const cached = await isSongCached(song.id)
-      setIsCached(cached)
-    }
-    checkCache()
-  }, [song.id])
 
   return (
-    <div className="song-card group">
-      <div className="relative">
-        <img 
-          src={song.cover_url || '/default-cover.jpg'} 
+    <div
+      className="group bg-[#181818] p-4 rounded-lg hover:bg-[#282828] transition-all duration-200 cursor-pointer relative"
+      onClick={handlePlay}
+    >
+      {/* Cover */}
+      <div className="relative mb-4">
+        <img
+          src={song.cover_url || `https://picsum.photos/200/200?random=${song.title}`}
           alt={song.title}
-          className="w-full aspect-square rounded-md object-cover mb-4"
+          className="w-full aspect-square rounded-md object-cover shadow-lg"
         />
-        <button 
-          onClick={handlePlay}
-          className="absolute bottom-2 right-2 w-12 h-12 rounded-full bg-spotify-green flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 shadow-lg"
+        <button
+          onClick={(e) => { e.stopPropagation(); handlePlay() }}
+          className={`absolute bottom-2 right-2 w-11 h-11 rounded-full bg-spotify-green shadow-xl flex items-center justify-center transition-all duration-200 hover:scale-105 hover:bg-spotify-green-hover ${
+            isCurrentSong && isPlaying
+              ? 'opacity-100 translate-y-0'
+              : 'opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0'
+          }`}
         >
-          {isCurrentSong && isPlaying ? <Pause size={24} fill="black" /> : <Play size={24} fill="black" className="ml-0.5" />}
+          {isCurrentSong && isPlaying
+            ? <Pause size={20} fill="black" />
+            : <Play  size={20} fill="black" className="ml-0.5" />
+          }
         </button>
       </div>
-      
-      <div>
-        <h3 className="text-white font-medium truncate">{song.title}</h3>
-        <p className="text-spotify-light-gray text-sm truncate">{song.artist}</p>
-      </div>
-      
-      <div className="flex items-center justify-between mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button 
-          onClick={handleDownload}
-          disabled={isDownloading || isCached}
-          className="text-spotify-light-gray hover:text-white transition-colors"
-        >
-          {isCached ? <Check size={18} className="text-spotify-green" /> : <Download size={18} />}
-        </button>
-        <button className="text-spotify-light-gray hover:text-white transition-colors">
-          <MoreHorizontal size={18} />
-        </button>
-      </div>
+
+      <h3 className={`text-sm font-semibold truncate mb-1 ${isCurrentSong ? 'text-spotify-green' : 'text-white'}`}>
+        {song.title}
+      </h3>
+      <p className="text-spotify-light-gray text-xs truncate">{song.artist}</p>
+
+      {/* Like button */}
+      <button
+        onClick={handleLike}
+        disabled={likeLoading}
+        className={`absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-200 ${
+          isLiked ? 'text-spotify-green opacity-100' : 'text-white/70 hover:text-white'
+        }`}
+      >
+        <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
+      </button>
     </div>
   )
 }
