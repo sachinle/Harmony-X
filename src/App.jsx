@@ -13,13 +13,16 @@ import Player from './components/Player/Player'
 import BottomNav from './components/Navigation/BottomNav'
 import NowPlaying from './pages/NowPlaying'
 import { Toaster } from 'react-hot-toast'
-import { Analytics } from "@vercel/analytics/react";
+import { Analytics } from "@vercel/analytics/react"
+import Loader from './components/Loader/Loader'
+
 
 function App() {
   const dispatch = useDispatch()
   const { user } = useSelector((state) => state.user)
   const [showMobilePlayer, setShowMobilePlayer] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -43,9 +46,14 @@ function App() {
       } else {
         dispatch(clearUser())
       }
+      setAuthLoading(false)
     })
     return () => unsubscribe()
   }, [dispatch])
+
+   if (authLoading) {
+    return <Loader />   // ← replace the inline spinner block with this
+  }
 
   return (
     <div className="min-h-screen bg-spotify-black">
@@ -103,7 +111,9 @@ function App() {
           success: { iconTheme: { primary: '#1DB954', secondary: '#000' } },
         }}
       />
+
       <Analytics />
+
     </div>
   )
 }
