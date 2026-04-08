@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, User, Settings, LogOut } from 'lucide-react'
+import { ChevronLeft, ChevronRight, User, Settings, LogOut, Menu } from 'lucide-react'
 import { logout } from '../../services/firebase'
 import { clearUser } from '../../store/slices/userSlice'
 
-const Navbar = () => {
+const Navbar = ({ onMenuClick }) => {
   const { user }  = useSelector((state) => state.user)
   const dispatch  = useDispatch()
   const navigate  = useNavigate()
@@ -29,18 +29,25 @@ const Navbar = () => {
   if (!user) return null
 
   return (
-    <div className="fixed top-0 left-[240px] right-0 z-30 h-16 flex items-center justify-between px-8 bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
-      {/* Back / Forward */}
+    <div className="fixed top-0 left-0 md:left-[240px] right-0 z-30 h-16 flex items-center justify-between px-4 md:px-8 bg-[#121212] border-b border-white/5 pointer-events-none">
+      {/* Mobile hamburger + Back/Forward */}
       <div className="flex items-center gap-2 pointer-events-auto">
+        {/* Hamburger (mobile only) */}
+        <button
+          onClick={onMenuClick}
+          className="md:hidden w-8 h-8 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-black/80 transition"
+        >
+          <Menu size={18} />
+        </button>
         <button
           onClick={() => navigate(-1)}
-          className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-black/80 transition"
+          className="hidden md:flex w-8 h-8 rounded-full bg-black/60 items-center justify-center text-white hover:bg-black/80 transition"
         >
           <ChevronLeft size={18} />
         </button>
         <button
           onClick={() => navigate(1)}
-          className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-black/80 transition"
+          className="hidden md:flex w-8 h-8 rounded-full bg-black/60 items-center justify-center text-white hover:bg-black/80 transition"
         >
           <ChevronRight size={18} />
         </button>

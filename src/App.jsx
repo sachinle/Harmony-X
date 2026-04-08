@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from './services/firebase'
@@ -10,11 +10,15 @@ import AppRouter from './routes/AppRouter'
 import Sidebar from './components/Sidebar/Sidebar'
 import Navbar from './components/Navbar/Navbar'
 import Player from './components/Player/Player'
+import BottomNav from './components/Navigation/BottomNav'
+import NowPlaying from './pages/NowPlaying'
 import { Toaster } from 'react-hot-toast'
 
 function App() {
   const dispatch = useDispatch()
   const { user } = useSelector((state) => state.user)
+  const [showMobilePlayer, setShowMobilePlayer] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -26,11 +30,7 @@ function App() {
           photoURL: firebaseUser.photoURL,
         }
         dispatch(setUser(userData))
-
-        // Ensure user row exists in Supabase
-        await upsertUser(userData.uid, userData.name, userData.email, userData.photoURL)
-
-        // Pre-load liked songs & playlists into Redux
+        await upsertUser(userData.uid, userData.name, userData.email)
         try {
           const [liked, playlists] = await Promise.all([
             fetchLikedSongs(userData.uid),
@@ -38,9 +38,7 @@ function App() {
           ])
           dispatch(setLikedSongs(liked))
           dispatch(setPlaylists(playlists))
-        } catch (e) {
-          console.error('Failed to load user library:', e)
-        }
+        } catch (e) { console.error('Failed to load user library:', e) }
       } else {
         dispatch(clearUser())
       }
@@ -50,16 +48,50 @@ function App() {
 
   return (
     <div className="min-h-screen bg-spotify-black">
-      {user && <Sidebar />}
-      <div className={`${user ? 'ml-[240px]' : ''} min-h-screen flex flex-col`}>
-        {user && <Navbar />}
-        <main className={`flex-1 ${user ? 'pt-16' : ''}`}>
+
+      {/* Desktop sidebar — fixed, out of document flow */}
+      {user && (
+        <div className="hidden md:block fixed left-0 top-0 bottom-0 z-20 w-[240px]">
+          <Sidebar />
+        </div>
+      )}
+
+      {/* Mobile sidebar drawer */}
+      {user && sidebarOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/70 z-40 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <div className="fixed left-0 top-0 bottom-0 z-50 md:hidden animate-slide-left">
+            <Sidebar onClose={() => setSidebarOpen(false)} />
+          </div>
+        </>
+      )}
+
+      {/* Main content */}
+      <div className={`${user ? 'md:ml-[240px]' : ''} flex flex-col h-screen overflow-hidden`}>
+        {user && <Navbar onMenuClick={() => setSidebarOpen(true)} />}
+        <main className={`flex-1 overflow-y-auto ${user ? 'pt-16 pb-28' : ''}`}>
           <AppRouter />
         </main>
       </div>
+
+      {/* Desktop player */}
       {user && <Player />}
+
+      {/* Mobile bottom nav + mini player */}
+      {user && (
+        <BottomNav onOpenPlayer={() => setShowMobilePlayer(true)} />
+      )}
+
+      {/* Mobile full-screen player */}
+      {showMobilePlayer && (
+        <NowPlaying onClose={() => setShowMobilePlayer(false)} />
+      )}
+
       <Toaster
-        position="bottom-right"
+        position="top-center"
         toastOptions={{
           style: {
             background: '#282828',

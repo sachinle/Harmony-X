@@ -52,7 +52,7 @@ const Home = () => {
   }
 
   return (
-    <div className="px-8 pb-36 pt-4">
+    <div className="px-8 pb-36 pt-2">
       <div className="mb-8">
         <h1 className="text-white text-3xl font-bold mb-6">
           {user ? `${getGreeting()}, ${user.name.split(' ')[0]}` : 'Welcome to Harmony X'}

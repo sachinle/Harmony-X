@@ -11,9 +11,16 @@ const initialState = {
   quality: '128',
   isDataSaverMode: false,
   isBuffering: false,
-  repeatMode: 'off', // 'off' | 'one' | 'all'
+  repeatMode: 'off',   // 'off' | 'one' | 'all'
   isShuffled: false,
   shuffledPlaylist: [],
+  // Queue: songs to play after the current one, before returning to the playlist
+  queue: [],
+  // Sleep timer: ms timestamp when playback should stop (null = off)
+  sleepTimerEnd: null,
+  // Show panels
+  showQueue: false,
+  showDevices: false,
 }
 
 const playerSlice = createSlice({
@@ -33,20 +40,21 @@ const playerSlice = createSlice({
         state.currentIndex = index >= 0 ? index : playlist.findIndex(s => s.id === song.id)
       }
     },
-    setCurrentSong:    (state, action) => { state.currentSong    = action.payload },
-    setCurrentPlaylist:(state, action) => {
+    setCurrentSong:     (state, action) => { state.currentSong     = action.payload },
+    setCurrentPlaylist: (state, action) => {
       state.currentPlaylist = action.payload
       if (state.isShuffled)
         state.shuffledPlaylist = [...action.payload].sort(() => Math.random() - 0.5)
     },
-    setCurrentIndex:   (state, action) => { state.currentIndex   = action.payload },
-    setIsPlaying:      (state, action) => { state.isPlaying      = action.payload },
-    setVolume:         (state, action) => { state.volume         = Math.max(0, Math.min(1, action.payload)) },
-    setCurrentTime:    (state, action) => { state.currentTime    = action.payload },
-    setDuration:       (state, action) => { state.duration       = action.payload },
-    setQuality:        (state, action) => { state.quality        = action.payload },
-    setIsDataSaverMode:(state, action) => { state.isDataSaverMode= action.payload },
-    setIsBuffering:    (state, action) => { state.isBuffering    = action.payload },
+    setCurrentIndex:    (state, action) => { state.currentIndex    = action.payload },
+    setIsPlaying:       (state, action) => { state.isPlaying       = action.payload },
+    setVolume:          (state, action) => { state.volume          = Math.max(0, Math.min(1, action.payload)) },
+    setCurrentTime:     (state, action) => { state.currentTime     = action.payload },
+    setDuration:        (state, action) => { state.duration        = action.payload },
+    setQuality:         (state, action) => { state.quality         = action.payload },
+    setIsDataSaverMode: (state, action) => { state.isDataSaverMode = action.payload },
+    setIsBuffering:     (state, action) => { state.isBuffering     = action.payload },
+
     toggleRepeat: (state) => {
       const modes = ['off', 'one', 'all']
       state.repeatMode = modes[(modes.indexOf(state.repeatMode) + 1) % modes.length]
@@ -62,13 +70,55 @@ const playerSlice = createSlice({
         state.currentIndex = idx !== -1 ? idx : 0
       }
     },
+
+    // ── Queue ────────────────────────────────────────────────────────────
+    addToQueue: (state, action) => {
+      // action.payload can be a single song or array of songs
+      const songs = Array.isArray(action.payload) ? action.payload : [action.payload]
+      state.queue.push(...songs)
+    },
+    removeFromQueue: (state, action) => {
+      state.queue = state.queue.filter((_, i) => i !== action.payload)
+    },
+    clearQueue: (state) => { state.queue = [] },
+    reorderQueue: (state, action) => {
+      const { from, to } = action.payload
+      const [item] = state.queue.splice(from, 1)
+      state.queue.splice(to, 0, item)
+    },
+    playFromQueue: (state) => {
+      if (state.queue.length === 0) return
+      const [next, ...rest] = state.queue
+      state.queue       = rest
+      state.currentSong = next
+      state.isPlaying   = true
+    },
+
+    // ── Panel visibility ─────────────────────────────────────────────────
+    toggleQueuePanel:   (state) => { state.showQueue   = !state.showQueue   },
+    toggleDevicePanel:  (state) => { state.showDevices = !state.showDevices },
+    setShowQueue:       (state, action) => { state.showQueue   = action.payload },
+    setShowDevices:     (state, action) => { state.showDevices = action.payload },
+
+    // ── Sleep timer ──────────────────────────────────────────────────────
+    setSleepTimer: (state, action) => { state.sleepTimerEnd = action.payload },
+    clearSleepTimer: (state) => { state.sleepTimerEnd = null },
+
     nextSong: (state) => {
       if (state.repeatMode === 'one') { state.isPlaying = true; return }
+      // Check queue first
+      if (state.queue.length > 0) {
+        const [next, ...rest] = state.queue
+        state.queue       = rest
+        state.currentSong = next
+        state.isPlaying   = true
+        return
+      }
       const playlist = state.isShuffled ? state.shuffledPlaylist : state.currentPlaylist
       if (!playlist.length) return
       let next = state.currentIndex + 1
       if (next >= playlist.length) {
-        if (state.repeatMode === 'all') next = 0; else return
+        if (state.repeatMode === 'all') next = 0; else { state.isPlaying = false; return }
       }
       state.currentIndex = next
       state.currentSong  = playlist[next]
@@ -93,6 +143,9 @@ export const {
   setIsPlaying, setVolume, setCurrentTime, setDuration, setQuality,
   setIsDataSaverMode, setIsBuffering, toggleRepeat, toggleShuffle,
   nextSong, previousSong,
+  addToQueue, removeFromQueue, clearQueue, reorderQueue, playFromQueue,
+  toggleQueuePanel, toggleDevicePanel, setShowQueue, setShowDevices,
+  setSleepTimer, clearSleepTimer,
 } = playerSlice.actions
 
 export default playerSlice.reducer

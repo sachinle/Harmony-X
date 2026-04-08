@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl    = import.meta.env.VITE_SUPABASE_URL
+const supabaseUrl     = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
@@ -9,15 +9,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 export const upsertUser = async (uid, name, email, photoURL = null) => {
   const { error } = await supabase
     .from('users')
-    .upsert({ id: uid, name, email, photo_url: photoURL }, { onConflict: 'id' })
+    .upsert({ id: uid, name, email }, { onConflict: 'id' })
   if (error) console.error('upsertUser error:', error)
 }
 
 export const updateUserName = async (uid, name) => {
-  const { error } = await supabase
-    .from('users')
-    .update({ name })
-    .eq('id', uid)
+  const { error } = await supabase.from('users').update({ name }).eq('id', uid)
   if (error) throw error
 }
 
@@ -32,13 +29,26 @@ export const fetchSongs = async () => {
 }
 
 export const fetchSongById = async (id) => {
+  const { data, error } = await supabase.from('songs').select('*').eq('id', id).single()
+  if (error) throw error
+  return data
+}
+
+export const fetchSongsByGenre = async (genre) => {
   const { data, error } = await supabase
     .from('songs')
     .select('*')
-    .eq('id', id)
-    .single()
+    .ilike('genre', genre)
+    .order('created_at', { ascending: false })
   if (error) throw error
   return data
+}
+
+export const incrementPlayCount = async (songId) => {
+  // Use rpc or manual increment — suppress errors silently
+  try {
+    await supabase.rpc('increment_play_count', { song_id: songId })
+  } catch (_) { /* ignore */ }
 }
 
 // ─── Playlists ────────────────────────────────────────────────────────────────
@@ -63,10 +73,7 @@ export const createPlaylist = async (userId, name) => {
 }
 
 export const deletePlaylist = async (playlistId) => {
-  const { error } = await supabase
-    .from('playlists')
-    .delete()
-    .eq('id', playlistId)
+  const { error } = await supabase.from('playlists').delete().eq('id', playlistId)
   if (error) throw error
 }
 
@@ -84,7 +91,7 @@ export const addSongToPlaylist = async (playlistId, songId, position = 0) => {
   const { error } = await supabase
     .from('playlist_songs')
     .insert([{ playlist_id: playlistId, song_id: songId, position }])
-  if (error) throw error
+  if (error && !error.message.includes('duplicate')) throw error
 }
 
 export const removeSongFromPlaylist = async (playlistId, songId) => {
@@ -156,4 +163,47 @@ export const fetchListeningHistory = async (userId, limit = 20) => {
       seen.add(song.id)
       return true
     })
+}
+
+// ─── Device Sessions (multi-device sync) ─────────────────────────────────────
+export const upsertDeviceSession = async (userId, deviceId, deviceName, sessionData) => {
+  const { error } = await supabase
+    .from('device_sessions')
+    .upsert(
+      { user_id: userId, device_id: deviceId, device_name: deviceName, ...sessionData, last_seen: new Date().toISOString() },
+      { onConflict: 'user_id,device_id' }
+    )
+  if (error) console.error('upsertDeviceSession error:', error)
+}
+
+export const fetchDeviceSessions = async (userId) => {
+  const { data, error } = await supabase
+    .from('device_sessions')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('last_seen', new Date(Date.now() - 5 * 60 * 1000).toISOString()) // last 5 min
+    .order('last_seen', { ascending: false })
+  if (error) return []
+  return data
+}
+
+export const removeDeviceSession = async (userId, deviceId) => {
+  await supabase
+    .from('device_sessions')
+    .delete()
+    .eq('user_id', userId)
+    .eq('device_id', deviceId)
+}
+
+// Subscribe to playback changes from other devices
+// NOTE: .on() must be called BEFORE .subscribe()
+export const subscribeToDeviceSync = (userId, onUpdate) => {
+  const channel = supabase.channel(`device_sync:${userId}`)
+  channel.on(
+    'postgres_changes',
+    { event: '*', schema: 'public', table: 'device_sessions', filter: `user_id=eq.${userId}` },
+    (payload) => onUpdate(payload)
+  )
+  channel.subscribe()
+  return channel
 }

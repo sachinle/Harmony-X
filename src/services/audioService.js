@@ -16,6 +16,14 @@ class AudioService {
     this.audio.addEventListener('waiting', () => this.emit('buffering', true))
     this.audio.addEventListener('playing', () => this.emit('buffering', false))
     this.audio.addEventListener('durationchange', () => this.emit('duration', this.audio.duration))
+    this.audio.addEventListener('error', () => {
+      this.emit('buffering', false)
+      this.emit('play', false)
+      const err = this.audio.error
+      const msg = err ? `Audio error (code ${err.code}): ${err.message}` : 'Audio failed to load'
+      console.error(msg, this.audio.src)
+      this.emit('error', msg)
+    })
   }
   
   on(event, callback) {

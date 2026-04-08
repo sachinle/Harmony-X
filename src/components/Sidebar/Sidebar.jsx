@@ -1,18 +1,20 @@
 import React, { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Home, Search, Library, Plus, Heart, Music2, Trash2 } from 'lucide-react'
+import { Home, Search, Library, Plus, Heart, Music2, Trash2, X } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { createPlaylist, deletePlaylist } from '../../services/supabase'
 import { addPlaylist, removePlaylist } from '../../store/slices/playlistSlice'
+import PlayingAnimation from '../Player/PlayingAnimation'
 import toast from 'react-hot-toast'
 
-const Sidebar = () => {
+const Sidebar = ({ onClose }) => {
   const dispatch  = useDispatch()
   const navigate  = useNavigate()
-  const { user }  = useSelector((state) => state.user)
-  const { playlists } = useSelector((state) => state.playlist)
-  const [creating, setCreating] = useState(false)
-  const [newName, setNewName]   = useState('')
+  const { user }  = useSelector((s) => s.user)
+  const { playlists } = useSelector((s) => s.playlist)
+  const { currentSong, isPlaying } = useSelector((s) => s.player)
+  const [creating, setCreating]   = useState(false)
+  const [newName, setNewName]     = useState('')
   const [showInput, setShowInput] = useState(false)
 
   const handleCreatePlaylist = async (e) => {
@@ -27,11 +29,9 @@ const Sidebar = () => {
       setNewName('')
       setShowInput(false)
       navigate(`/playlist/${pl.id}`)
-    } catch {
-      toast.error('Failed to create playlist')
-    } finally {
-      setCreating(false)
-    }
+      onClose?.()
+    } catch { toast.error('Failed to create playlist') }
+    finally { setCreating(false) }
   }
 
   const handleDeletePlaylist = async (e, id, name) => {
@@ -42,56 +42,39 @@ const Sidebar = () => {
       await deletePlaylist(id)
       dispatch(removePlaylist(id))
       toast.success('Playlist deleted')
-    } catch {
-      toast.error('Failed to delete playlist')
-    }
+    } catch { toast.error('Failed to delete playlist') }
   }
 
+  const navLinkClass = ({ isActive }) =>
+    `flex items-center gap-4 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+      isActive ? 'text-white bg-spotify-gray' : 'text-spotify-light-gray hover:text-white'
+    }`
+
   return (
-    <div className="fixed left-0 top-0 bottom-0 w-[240px] bg-black z-40 flex flex-col select-none">
-      {/* Logo */}
-      <div className="px-6 pt-6 pb-4">
+    <div className="w-[240px] bg-black h-full flex flex-col select-none">
+      {/* Logo + close (mobile) */}
+      <div className="px-6 pt-6 pb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Music2 className="text-spotify-green" size={28} />
           <span className="text-white text-xl font-bold tracking-tight">Harmony X</span>
         </div>
+        {onClose && (
+          <button onClick={onClose} className="text-white/60 hover:text-white transition md:hidden">
+            <X size={20} />
+          </button>
+        )}
       </div>
 
       {/* Main Nav */}
       <nav className="px-2">
-        <NavLink
-          to="/"
-          end
-          className={({ isActive }) =>
-            `flex items-center gap-4 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-              isActive ? 'text-white bg-spotify-gray' : 'text-spotify-light-gray hover:text-white'
-            }`
-          }
-        >
-          <Home size={22} />
-          Home
+        <NavLink to="/" end className={navLinkClass} onClick={onClose}>
+          <Home size={22} /> Home
         </NavLink>
-        <NavLink
-          to="/search"
-          className={({ isActive }) =>
-            `flex items-center gap-4 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-              isActive ? 'text-white bg-spotify-gray' : 'text-spotify-light-gray hover:text-white'
-            }`
-          }
-        >
-          <Search size={22} />
-          Search
+        <NavLink to="/search" className={navLinkClass} onClick={onClose}>
+          <Search size={22} /> Search
         </NavLink>
-        <NavLink
-          to="/library"
-          className={({ isActive }) =>
-            `flex items-center gap-4 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-              isActive ? 'text-white bg-spotify-gray' : 'text-spotify-light-gray hover:text-white'
-            }`
-          }
-        >
-          <Library size={22} />
-          Your Library
+        <NavLink to="/library" className={navLinkClass} onClick={onClose}>
+          <Library size={22} /> Your Library
         </NavLink>
       </nav>
 
@@ -137,14 +120,7 @@ const Sidebar = () => {
           </form>
         )}
 
-        <NavLink
-          to="/liked"
-          className={({ isActive }) =>
-            `flex items-center gap-4 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-              isActive ? 'text-white bg-spotify-gray' : 'text-spotify-light-gray hover:text-white'
-            }`
-          }
-        >
+        <NavLink to="/liked" className={navLinkClass} onClick={onClose}>
           <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-spotify-green rounded-sm flex items-center justify-center">
             <Heart size={14} fill="white" className="text-white" />
           </div>
@@ -155,27 +131,49 @@ const Sidebar = () => {
       <div className="mx-4 my-2 border-t border-white/10" />
 
       {/* Playlist list */}
-      <div className="flex-1 overflow-y-auto px-2 pb-4">
-        {playlists.map((pl) => (
-          <NavLink
-            key={pl.id}
-            to={`/playlist/${pl.id}`}
-            className={({ isActive }) =>
-              `group flex items-center justify-between px-4 py-2 rounded-lg text-sm transition-colors ${
-                isActive ? 'text-white bg-spotify-gray' : 'text-spotify-light-gray hover:text-white'
-              }`
-            }
-          >
-            <span className="truncate">{pl.name}</span>
-            <button
-              onClick={(e) => handleDeletePlaylist(e, pl.id, pl.name)}
-              className="opacity-0 group-hover:opacity-100 text-spotify-light-gray hover:text-red-400 transition ml-2 flex-shrink-0"
+      <div className="flex-1 overflow-y-auto px-2 pb-4 no-scrollbar">
+        {playlists.map((pl) => {
+          // Check if this playlist currently contains the playing song
+          return (
+            <NavLink
+              key={pl.id}
+              to={`/playlist/${pl.id}`}
+              onClick={onClose}
+              className={({ isActive }) =>
+                `group flex items-center justify-between px-4 py-2 rounded-lg text-sm transition-colors ${
+                  isActive ? 'text-white bg-spotify-gray' : 'text-spotify-light-gray hover:text-white'
+                }`
+              }
             >
-              <Trash2 size={14} />
-            </button>
-          </NavLink>
-        ))}
+              <span className="truncate flex-1">{pl.name}</span>
+              <button
+                onClick={(e) => handleDeletePlaylist(e, pl.id, pl.name)}
+                className="opacity-0 group-hover:opacity-100 text-spotify-light-gray hover:text-red-400 transition ml-2 flex-shrink-0"
+              >
+                <Trash2 size={14} />
+              </button>
+            </NavLink>
+          )
+        })}
       </div>
+
+      {/* Now playing mini strip at bottom of sidebar */}
+      {currentSong && (
+        <div className="px-4 py-3 border-t border-white/10 bg-[#111]">
+          <div className="flex items-center gap-2">
+            <img
+              src={currentSong.cover_url || 'https://picsum.photos/32/32'}
+              alt={currentSong.title}
+              className="w-8 h-8 rounded flex-shrink-0 object-cover"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-white text-xs font-medium truncate">{currentSong.title}</p>
+              <p className="text-white/40 text-[10px] truncate">{currentSong.artist}</p>
+            </div>
+            <PlayingAnimation isPlaying={isPlaying} size="sm" />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

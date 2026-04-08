@@ -6,7 +6,12 @@ const AUDIO_BUCKET = 'audio'
  * Get public URL for an audio file from Supabase Storage.
  * Files are named: {fileKey}_{quality}.mp3  (e.g. song1_128.mp3)
  */
-export const getAudioUrl = (fileKey, quality = '128') => {
+/**
+ * Returns the best available audio URL for a song.
+ * Priority: direct audio_url (if provided) → Supabase Storage constructed URL
+ */
+export const getAudioUrl = (fileKey, quality = '128', audioUrl = null) => {
+  if (audioUrl) return audioUrl
   if (!fileKey) return null
   const { data } = supabase.storage
     .from(AUDIO_BUCKET)

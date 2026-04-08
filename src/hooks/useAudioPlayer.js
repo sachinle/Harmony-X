@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { audioService } from '../services/audioService'
 import { getAudioUrl } from '../services/storageService'
+import { useToast } from './useToast'
 import { store } from '../store'
 import {
   setIsPlaying,
@@ -10,24 +11,45 @@ import {
   setIsBuffering,
   nextSong,
   previousSong,
+  clearSleepTimer,
 } from '../store/slices/playerSlice'
 import { addToListeningHistory } from '../services/supabase'
 
 export const useAudioPlayer = () => {
   const dispatch = useDispatch()
+  const { showError } = useToast()
   const { currentSong, isPlaying, volume, quality, isDataSaverMode } =
     useSelector((state) => state.player)
   const { user } = useSelector((state) => state.user)
 
   // Wire audio-service events → Redux (once on mount)
   useEffect(() => {
-    const onTime      = (t) => dispatch(setCurrentTime(t))
+    const onTime = (t) => {
+      dispatch(setCurrentTime(t))
+      // Sleep timer check
+      const { sleepTimerEnd } = store.getState().player
+      if (sleepTimerEnd && Date.now() >= sleepTimerEnd) {
+        audioService.pause()
+        dispatch(setIsPlaying(false))
+        dispatch(clearSleepTimer())
+      }
+    }
     const onDuration  = (d) => dispatch(setDuration(d))
     const onBuffering = (b) => dispatch(setIsBuffering(b))
     const onCanPlay   = ()  => dispatch(setIsBuffering(false))
     const onPlay      = (p) => dispatch(setIsPlaying(p))
+    const onError     = ()  => {
+      dispatch(setIsPlaying(false))
+      showError('Could not play this song. Audio file not found.')
+    }
     const onEnded     = ()  => {
-      const { repeatMode } = store.getState().player
+      const { repeatMode, sleepTimerEnd } = store.getState().player
+      // Stop for sleep timer
+      if (sleepTimerEnd && Date.now() >= sleepTimerEnd) {
+        dispatch(setIsPlaying(false))
+        dispatch(clearSleepTimer())
+        return
+      }
       if (repeatMode === 'one') {
         audioService.seekTo(0)
         audioService.play()
@@ -42,6 +64,7 @@ export const useAudioPlayer = () => {
     audioService.on('canplay',    onCanPlay)
     audioService.on('play',       onPlay)
     audioService.on('ended',      onEnded)
+    audioService.on('error',      onError)
 
     return () => {
       audioService.off('timeupdate', onTime)
@@ -50,14 +73,16 @@ export const useAudioPlayer = () => {
       audioService.off('canplay',    onCanPlay)
       audioService.off('play',       onPlay)
       audioService.off('ended',      onEnded)
+      audioService.off('error',      onError)
     }
   }, [dispatch])
 
   // Load & play whenever the current song or quality changes
   useEffect(() => {
-    if (!currentSong?.file_key) return
+    if (!currentSong?.file_key && !currentSong?.audio_url) return
     const q   = isDataSaverMode ? '32' : quality
-    const url = getAudioUrl(currentSong.file_key, q)
+    const url = getAudioUrl(currentSong.file_key, q, currentSong.audio_url)
+    if (!url) return
     audioService.loadSong(url, true)
     if (user) {
       addToListeningHistory(user.uid, currentSong.id).catch(() => {})
