@@ -45,3 +45,5 @@ capacitor.config.cjs
 
 # Android Firebase config
 android/app/google-services.json
+
+*.claude

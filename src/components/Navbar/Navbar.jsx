@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, User, Settings, LogOut, Menu } from 'lucide-react'
 import { logout } from '../../services/firebase'
 import { clearUser } from '../../store/slices/userSlice'
+import UserAvatar from '../UserAvatar/UserAvatar'
 
 const Navbar = ({ onMenuClick }) => {
   const { user }  = useSelector((state) => state.user)
@@ -29,7 +30,18 @@ const Navbar = ({ onMenuClick }) => {
   if (!user) return null
 
   return (
-    <div className="fixed top-0 left-0 md:left-[240px] right-0 z-30 h-16 flex items-center justify-between px-4 md:px-8 bg-[#121212] border-b border-white/5 pointer-events-none">
+    <>
+    {/* Fills the status-bar area with the app background so nothing shows behind it */}
+    <div
+      className="fixed top-0 left-0 right-0 z-30 bg-[#121212]"
+      style={{ height: 'var(--sat)' }}
+    />
+    {/* Main navbar row sits directly below the status bar */}
+    <div
+      className="fixed left-0 md:left-[240px] right-0 z-30 h-14 flex items-center justify-between px-4 md:px-8 bg-[#121212] border-b border-white/5 pointer-events-none"
+      style={{ top: 'var(--sat)' }}
+    >
+    <div className="w-full flex items-center justify-between h-14">
       {/* Mobile hamburger + Back/Forward */}
       <div className="flex items-center gap-2 pointer-events-auto">
         {/* Hamburger (mobile only) */}
@@ -59,13 +71,7 @@ const Navbar = ({ onMenuClick }) => {
           onClick={() => setOpen(!open)}
           className="flex items-center gap-2 bg-black/60 hover:bg-black/80 rounded-full pl-1 pr-3 py-1 transition"
         >
-          {user.photoURL ? (
-            <img src={user.photoURL} alt={user.name} className="w-7 h-7 rounded-full object-cover" />
-          ) : (
-            <div className="w-7 h-7 rounded-full bg-spotify-green flex items-center justify-center text-black font-bold text-sm">
-              {user.name?.[0]?.toUpperCase()}
-            </div>
-          )}
+          <UserAvatar user={user} size={28} />
           <span className="text-white text-sm font-medium">{user.name}</span>
           <ChevronLeft size={14} className={`text-white transition-transform ${open ? 'rotate-90' : '-rotate-90'}`} />
         </button>
@@ -101,7 +107,9 @@ const Navbar = ({ onMenuClick }) => {
           </div>
         )}
       </div>
-    </div>
+    </div>{/* end inner row */}
+    </div>{/* end navbar */}
+    </>
   )
 }
 

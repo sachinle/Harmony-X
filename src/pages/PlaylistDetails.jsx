@@ -177,18 +177,18 @@ const PlaylistDetails = () => {
                   {/* Mobile duration */}
                   <span className="md:hidden text-spotify-light-gray text-xs ml-auto">{formatDuration(song.duration)}</span>
 
-                  {/* Actions */}
-                  <div className="hidden md:flex items-center justify-end gap-1">
+                  {/* Actions — always visible on mobile */}
+                  <div className="flex items-center justify-end gap-1">
                     <button
                       ref={(el) => { menuBtnRefs.current[song.id] = el }}
                       onClick={(e) => { e.stopPropagation(); setMenuSong(menuSong?.id === song.id ? null : song) }}
-                      className="opacity-0 group-hover:opacity-100 text-spotify-light-gray hover:text-white transition"
+                      className="md:opacity-0 md:group-hover:opacity-100 opacity-100 text-spotify-light-gray hover:text-white transition"
                     >
                       <MoreHorizontal size={16} />
                     </button>
                     <button
                       onClick={(e) => handleRemoveSong(e, song.id)}
-                      className="opacity-0 group-hover:opacity-100 text-spotify-light-gray hover:text-red-400 transition"
+                      className="md:opacity-0 md:group-hover:opacity-100 opacity-100 text-spotify-light-gray hover:text-red-400 transition"
                     >
                       <Trash2 size={16} />
                     </button>

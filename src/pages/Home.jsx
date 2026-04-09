@@ -54,8 +54,7 @@ const Home = () => {
 
   return (
     <PullToRefresh onRefresh={loadData}>
-    <div className="px-8 pb-36 pt-2">
-    <div className="px-8 pb-36 pt-2">
+    <div className="px-4 md:px-8 pb-4 pt-4">
       <div className="mb-8">
         <h1 className="text-white text-3xl font-bold mb-6">
           {user ? `${getGreeting()}, ${user.name.split(' ')[0]}` : 'Welcome to Harmony X'}
@@ -79,11 +78,11 @@ const Home = () => {
         <section className="mb-10">
           <h2 className="text-white text-2xl font-bold mb-4">Recently played</h2>
           {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-5">
               {[...Array(5)].map((_, i) => <SongCardSkeleton key={i} />)}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-5">
               {recentSongs.map((song, i) => (
                 <SongCard key={song.id} song={song} playlist={recentSongs} index={i} />
               ))}
@@ -95,11 +94,11 @@ const Home = () => {
       <section className="mb-10">
         <h2 className="text-white text-2xl font-bold mb-4">{user ? 'Made for you' : 'Popular songs'}</h2>
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-5">
             {[...Array(10)].map((_, i) => <SongCardSkeleton key={i} />)}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-5">
             {featuredSongs.map((song, i) => (
               <SongCard key={song.id} song={song} playlist={featuredSongs} index={i} />
             ))}
@@ -110,13 +109,12 @@ const Home = () => {
       {featuredSongs.length > 0 && !loading && (
         <button
           onClick={() => dispatch(playSongFromPlaylist({ song: featuredSongs[0], playlist: featuredSongs, index: 0 }))}
-          className="flex items-center gap-2 bg-spotify-green text-black font-bold px-6 py-3 rounded-full hover:bg-spotify-green-hover transition hover:scale-105"
+          className="flex items-center gap-2 bg-spotify-green text-black font-bold px-6 py-3 rounded-full hover:bg-spotify-green-hover transition hover:scale-105 mb-4"
         >
           <Play size={18} fill="black" />
           Play All Songs
         </button>
       )}
-    </div>
     </div>
     </PullToRefresh>
   )

@@ -10,6 +10,7 @@ import { updateUserName } from '../services/supabase'
 import { setUser, clearUser } from '../store/slices/userSlice'
 import { LogOut } from 'lucide-react'
 import toast from 'react-hot-toast'
+import UserAvatar from '../components/UserAvatar/UserAvatar'
 
 const Section = ({ title, children }) => (
   <div className="bg-[#181818] rounded-lg p-6 mb-4">
@@ -77,13 +78,7 @@ const Account = () => {
 
       <Section title="Profile">
         <div className="flex items-center gap-4 mb-6">
-          {user?.photoURL ? (
-            <img src={user.photoURL} alt={user.name} className="w-20 h-20 rounded-full object-cover" />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-spotify-green flex items-center justify-center text-black font-bold text-3xl">
-              {user?.name?.[0]?.toUpperCase()}
-            </div>
-          )}
+          <UserAvatar user={user} size={80} />
           <div>
             <p className="text-white font-bold text-xl">{user?.name}</p>
             <p className="text-spotify-light-gray text-sm">{user?.email}</p>

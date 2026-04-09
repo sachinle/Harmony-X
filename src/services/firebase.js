@@ -1,13 +1,13 @@
 import { initializeApp } from 'firebase/app'
-import { 
-  getAuth, 
-  GoogleAuthProvider, 
-  signInWithPopup, 
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
   signInWithCredential,
   signOut,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  updateProfile
+  updateProfile,
 } from 'firebase/auth'
 
 const firebaseConfig = {
@@ -27,7 +27,7 @@ const isNative = () =>
   typeof window !== 'undefined' &&
   !!window.Capacitor?.isNativePlatform?.()
 
-// Email/Password
+// ─── Email / Password ─────────────────────────────────────────────────────────
 export const signUpWithEmail = async (email, password, displayName) => {
   const result = await createUserWithEmailAndPassword(auth, email, password)
   await updateProfile(result.user, { displayName })
@@ -39,42 +39,83 @@ export const signInWithEmail = async (email, password) => {
   return result.user
 }
 
-// Google
+// ─── Google Sign-In ───────────────────────────────────────────────────────────
 export const signInWithGoogle = async () => {
   try {
     if (isNative()) {
+      // Dynamically import to avoid errors in web builds
       const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
+
       const nativeResult = await FirebaseAuthentication.signInWithGoogle()
 
-      const idToken = nativeResult.credential?.idToken
-      if (!idToken) throw new Error('No idToken returned')
+      const idToken     = nativeResult?.credential?.idToken
+      const accessToken = nativeResult?.credential?.accessToken
 
-      const credential = GoogleAuthProvider.credential(idToken)
-      const result = await signInWithCredential(auth, credential)
-      return { user: result.user, error: null }
-    } else {
-      const result = await signInWithPopup(auth, googleProvider)
-      return { user: result.user, error: null }
+      if (idToken) {
+        // Sign in the web Firebase SDK so onAuthStateChanged fires
+        const credential = GoogleAuthProvider.credential(idToken, accessToken ?? undefined)
+        const result = await signInWithCredential(auth, credential)
+        return { user: result.user, error: null }
+      }
+
+      // skipNativeAuth:false path — native SDK already signed in; check web SDK user
+      // The bridge may have already synced the session
+      if (auth.currentUser) {
+        return { user: auth.currentUser, error: null }
+      }
+
+      // Last resort: wait briefly for onAuthStateChanged to propagate the session
+      return await new Promise((resolve) => {
+        const unsub = auth.onAuthStateChanged((u) => {
+          unsub()
+          if (u) resolve({ user: u, error: null })
+          else   resolve({ user: null, error: 'Google sign-in failed. Please try again.' })
+        })
+        // Timeout after 5 s
+        setTimeout(() => {
+          unsub()
+          resolve({ user: null, error: 'Sign-in timed out. Please try again.' })
+        }, 5000)
+      })
     }
+
+    // ── Web (popup) ────────────────────────────────────────────────────────────
+    const result = await signInWithPopup(auth, googleProvider)
+    return { user: result.user, error: null }
+
   } catch (error) {
+    // Swallow user-cancelled errors silently
     if (
       error?.code === 'SIGN_IN_CANCELLED' ||
       error?.message?.includes('SIGN_IN_CANCELLED') ||
-      error?.code === 'auth/popup-closed-by-user'
-    ) return { user: null, error: null }
+      error?.code === 'auth/popup-closed-by-user' ||
+      error?.message?.includes('popup-closed-by-user')
+    ) {
+      return { user: null, error: null }
+    }
 
     console.error('Google Sign-In error:', error)
-    return { user: null, error: error.message }
+    // Provide a friendly message instead of the raw Firebase/plugin error
+    const friendly =
+      error?.code === 'auth/network-request-failed'
+        ? 'No internet connection. Please check your network and try again.'
+        : error?.message?.includes('developer_error') || error?.message?.includes('10:')
+        ? 'Google sign-in is not configured correctly. Check SHA-1 in Firebase console.'
+        : error?.message ?? 'Something went wrong. Please try again.'
+
+    return { user: null, error: friendly }
   }
 }
 
-// Logout
+// ─── Logout ───────────────────────────────────────────────────────────────────
 export const logout = async () => {
   if (isNative()) {
     try {
       const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication')
       await FirebaseAuthentication.signOut()
-    } catch {}
+    } catch (e) {
+      console.warn('Native sign-out error (ignored):', e)
+    }
   }
   await signOut(auth)
 }

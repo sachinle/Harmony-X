@@ -131,11 +131,11 @@ const LikedSongs = () => {
                   {/* Mobile duration */}
                   <span className="md:hidden text-spotify-light-gray text-xs ml-auto">{formatDuration(song.duration)}</span>
 
-                  {/* Context menu */}
+                  {/* Context menu — always visible on mobile, hover-only on desktop */}
                   <button
                     ref={(el) => { menuBtnRefs.current[song.id] = el }}
                     onClick={(e) => { e.stopPropagation(); setMenuSong(menuSong?.id === song.id ? null : song) }}
-                    className="opacity-0 group-hover:opacity-100 text-spotify-light-gray hover:text-white transition flex items-center justify-center"
+                    className="md:opacity-0 md:group-hover:opacity-100 opacity-100 text-spotify-light-gray hover:text-white transition flex items-center justify-center"
                   >
                     <MoreHorizontal size={16} />
                   </button>

@@ -4,4 +4,6 @@
     <string name="title_activity_main">Harmony X</string>
     <string name="package_name">com.harmonyx.app</string>
     <string name="custom_url_scheme">com.harmonyx.app</string>
+    <!-- Web OAuth client ID from google-services.json (type 3) — required for Google Sign-In -->
+    <string name="default_web_client_id">447808932022-imajam8obmci75p3239v95s9ba8gafqg.apps.googleusercontent.com</string>
 </resources>

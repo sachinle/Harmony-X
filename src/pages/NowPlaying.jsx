@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   ChevronDown, SkipBack, SkipForward, Play, Pause,
-  Repeat, Repeat1, Shuffle, Heart, ListPlus, MoreHorizontal,
+  Repeat, Repeat1, Shuffle, Heart, ListPlus, MoreHorizontal, Share2,
 } from 'lucide-react'
 import { useAudioPlayer } from '../hooks/useAudioPlayer'
 import SeekBar from '../components/Player/SeekBar'
@@ -30,8 +30,20 @@ const NowPlaying = ({ onClose }) => {
   const { user } = useSelector((s) => s.user)
 
   const { playPause, seek, playNext, playPrev } = useAudioPlayer()
-  const isLiked = currentSong ? likedSongIds.includes(currentSong.id) : false
+  const isLiked    = currentSong ? likedSongIds.includes(currentSong.id) : false
   const RepeatIcon = repeatMode === 'one' ? Repeat1 : Repeat
+
+  const handleShare = async () => {
+    if (!currentSong) return
+    const text = `Listening to "${currentSong.title}" by ${currentSong.artist} on Harmony X`
+    if (navigator.share) {
+      try { await navigator.share({ title: currentSong.title, text }) } catch {}
+    } else {
+      await navigator.clipboard.writeText(text).catch(() => {})
+      const { default: toast } = await import('react-hot-toast')
+      toast.success('Copied to clipboard')
+    }
+  }
 
   const handleLike = async () => {
     if (!user || !currentSong) return
@@ -73,7 +85,7 @@ const NowPlaying = ({ onClose }) => {
       />
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-[#121212] pointer-events-none" />
 
-      <div className="relative flex flex-col h-full px-6 pt-safe-top pb-safe-bottom">
+      <div className="relative flex flex-col h-full px-6 pt-safe pb-safe">
         {/* Top bar */}
         <div className="flex items-center justify-between py-4">
           <button
@@ -178,13 +190,28 @@ const NowPlaying = ({ onClose }) => {
           </button>
         </div>
 
-        {/* Add to queue */}
-        <div className="flex items-center justify-center mb-8">
+        {/* Bottom actions */}
+        <div className="flex items-center justify-around mb-8">
           <button
             onClick={() => { dispatch(addToQueue(currentSong)); toast.success('Added to queue') }}
-            className="flex items-center gap-2 text-white/50 hover:text-white transition text-sm"
+            className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition active:scale-90"
           >
-            <ListPlus size={18} /> Add to queue
+            <ListPlus size={20} />
+            <span className="text-[10px]">Queue</span>
+          </button>
+          <button
+            onClick={handleShare}
+            className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition active:scale-90"
+          >
+            <Share2 size={20} />
+            <span className="text-[10px]">Share</span>
+          </button>
+          <button
+            onClick={() => setShowDetails(true)}
+            className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition active:scale-90"
+          >
+            <MoreHorizontal size={20} />
+            <span className="text-[10px]">Details</span>
           </button>
         </div>
       </div>

@@ -5,24 +5,25 @@ import { auth } from './services/firebase'
 import { setUser, clearUser } from './store/slices/userSlice'
 import { setLikedSongs } from './store/slices/librarySlice'
 import { setPlaylists } from './store/slices/playlistSlice'
+import { setIsPlaying, setCurrentSong } from './store/slices/playerSlice'
 import { upsertUser, fetchLikedSongs, fetchUserPlaylists } from './services/supabase'
+import { audioService } from './services/audioService'
 import AppRouter from './routes/AppRouter'
 import Sidebar from './components/Sidebar/Sidebar'
 import Navbar from './components/Navbar/Navbar'
 import Player from './components/Player/Player'
 import BottomNav from './components/Navigation/BottomNav'
 import NowPlaying from './pages/NowPlaying'
-import { Toaster } from 'react-hot-toast'
-import { Analytics } from "@vercel/analytics/react"
 import Loader from './components/Loader/Loader'
-
+import { Toaster } from 'react-hot-toast'
+import { Analytics } from '@vercel/analytics/react'
 
 function App() {
   const dispatch = useDispatch()
   const { user } = useSelector((state) => state.user)
   const [showMobilePlayer, setShowMobilePlayer] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [authLoading, setAuthLoading] = useState(true)
+  const [sidebarOpen, setSidebarOpen]           = useState(false)
+  const [authLoading, setAuthLoading]           = useState(true)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -44,21 +45,24 @@ function App() {
           dispatch(setPlaylists(playlists))
         } catch (e) { console.error('Failed to load user library:', e) }
       } else {
+        // ── Stop audio immediately on logout ──────────────────────────
+        audioService.pause()
+        dispatch(setIsPlaying(false))
+        dispatch(setCurrentSong(null))
         dispatch(clearUser())
+        setShowMobilePlayer(false)
       }
       setAuthLoading(false)
     })
     return () => unsubscribe()
   }, [dispatch])
 
-   if (authLoading) {
-    return <Loader />   // ← replace the inline spinner block with this
-  }
+  if (authLoading) return <Loader />
 
   return (
-    <div className="min-h-screen bg-spotify-black">
+    <div className="bg-spotify-black" style={{ minHeight: '100dvh' }}>
 
-      {/* Desktop sidebar — fixed, out of document flow */}
+      {/* Desktop sidebar */}
       {user && (
         <div className="hidden md:block fixed left-0 top-0 bottom-0 z-20 w-[240px]">
           <Sidebar />
@@ -78,18 +82,30 @@ function App() {
         </>
       )}
 
-      {/* Main content */}
-      <div className={`${user ? 'md:ml-[240px]' : ''} flex flex-col h-screen overflow-hidden`}>
+      {/* ── Main content column ─────────────────────────────────────── */}
+      <div className={`${user ? 'md:ml-[240px]' : ''} flex flex-col`} style={{ minHeight: '100dvh' }}>
         {user && <Navbar onMenuClick={() => setSidebarOpen(true)} />}
-        <main className={`flex-1 overflow-y-auto ${user ? 'pt-16 pb-28' : ''}`}>
+
+        {/*
+          Push content below:
+            – desktop: 56px navbar (h-14) + status-bar safe area
+            – mobile:  56px navbar + status-bar safe area
+          Push content above bottom:
+            – desktop: 90px player bar
+            – mobile:  ~108px bottom nav strip (mini-player + tabs)
+        */}
+        <main
+          className={`flex-1 overflow-y-auto no-scrollbar ${user ? 'md:pb-[90px] pb-[108px]' : ''}`}
+          style={user ? { paddingTop: 'calc(56px + var(--sat))' } : {}}
+        >
           <AppRouter />
         </main>
       </div>
 
-      {/* Desktop player */}
+      {/* Desktop player bar */}
       {user && <Player />}
 
-      {/* Mobile bottom nav + mini player */}
+      {/* Mobile bottom nav */}
       {user && (
         <BottomNav onOpenPlayer={() => setShowMobilePlayer(true)} />
       )}
@@ -113,7 +129,6 @@ function App() {
       />
 
       <Analytics />
-
     </div>
   )
 }

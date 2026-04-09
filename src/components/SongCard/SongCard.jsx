@@ -92,24 +92,26 @@ const SongCard = ({ song, playlist = null, index = 0 }) => {
           <p className="text-white/30 text-xs truncate mt-0.5">{song.genre}</p>
         )}
 
-        {/* Like button */}
+        {/* Like button — always visible on touch devices, hover-only on desktop */}
         <button
           onClick={handleLike}
           disabled={likeLoading}
-          className={`absolute top-3 right-10 opacity-0 group-hover:opacity-100 transition-all duration-200 ${
-            isLiked ? 'text-spotify-green opacity-100' : 'text-white/70 hover:text-white'
-          }`}
+          className={`absolute top-2 right-9 transition-all duration-200 p-1 rounded-full
+            ${isLiked
+              ? 'text-spotify-green opacity-100'
+              : 'text-white/80 hover:text-white md:opacity-0 md:group-hover:opacity-100 opacity-100'
+            }`}
         >
-          <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
+          <Heart size={15} fill={isLiked ? 'currentColor' : 'none'} />
         </button>
 
-        {/* 3-dot context menu button */}
+        {/* 3-dot context menu — always visible on touch, hover on desktop */}
         <button
           ref={menuBtnRef}
           onClick={(e) => { e.stopPropagation(); setShowMenu((v) => !v) }}
-          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-200 text-white/70 hover:text-white"
+          className="absolute top-2 right-1 p-1 rounded-full text-white/80 hover:text-white transition-all duration-200 md:opacity-0 md:group-hover:opacity-100 opacity-100"
         >
-          <MoreHorizontal size={16} />
+          <MoreHorizontal size={15} />
         </button>
       </div>
 

@@ -1,5 +1,21 @@
 {
   "appId": "com.harmonyx.app",
   "appName": "Harmony X",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#121212",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#121212",
+      "overlaysWebView": true
+    },
+    "FirebaseAuthentication": {
+      "skipNativeAuth": false,
+      "providers": ["google.com", "password"]
+    }
+  }
 }

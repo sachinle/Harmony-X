@@ -51,9 +51,9 @@ const Sidebar = ({ onClose }) => {
     }`
 
   return (
-    <div className="w-[240px] bg-black h-full flex flex-col select-none">
+    <div className="w-[240px] bg-black h-full flex flex-col select-none" style={{ paddingTop: 'var(--sat)' }}>
       {/* Logo + close (mobile) */}
-      <div className="px-6 pt-6 pb-4 flex items-center justify-between">
+      <div className="px-6 pt-4 pb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Music2 className="text-spotify-green" size={28} />
           <span className="text-white text-xl font-bold tracking-tight">Harmony X</span>

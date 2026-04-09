@@ -5,6 +5,7 @@ import {
   ListPlus, PlayCircle, Heart, HeartOff, Info,
   Plus, ChevronRight, Download, CheckCircle,
 } from 'lucide-react'
+import { addToQueue } from '../../store/slices/playerSlice'
 import { setLikedSongs } from '../../store/slices/librarySlice'
 import { addPlaylist } from '../../store/slices/playlistSlice'
 import { likeSong, unlikeSong, addSongToPlaylist, createPlaylist } from '../../services/supabase'
@@ -62,7 +63,7 @@ const SongContextMenu = ({ song, triggerRef, onClose, onShowDetails, onPlay }) =
   }, [onClose, triggerRef])
 
   const handleAddToQueue = () => {
-    // Queue feature: add song to end of current playlist via toast for now
+    dispatch(addToQueue(song))
     toast.success(`Added "${song.title}" to queue`)
     onClose()
   }
