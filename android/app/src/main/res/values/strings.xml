@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Harmony X</string>
+    <string name="title_activity_main">Harmony X</string>
+    <string name="package_name">com.harmonyx.app</string>
+    <string name="custom_url_scheme">com.harmonyx.app</string>
+</resources>

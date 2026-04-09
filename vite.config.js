@@ -1,4 +1,3 @@
-// vite.config.js
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -16,6 +15,8 @@ export default defineConfig({
         theme_color: '#121212',
         background_color: '#121212',
         display: 'standalone',
+        start_url: '.',   // ✅ FIX: Required for Capacitor
+        scope: '.',       // ✅ FIX: Prevents routing issues
         icons: [
           {
             src: '/icons/icon-192.png',
@@ -30,6 +31,7 @@ export default defineConfig({
         ]
       },
       workbox: {
+        navigateFallback: '/index.html', // ✅ FIX: React routing support
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.r2\.cloudflarestorage\.com\/.*/i,
@@ -38,7 +40,7 @@ export default defineConfig({
               cacheName: 'audio-cache',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+                maxAgeSeconds: 30 * 24 * 60 * 60
               }
             }
           },
@@ -56,5 +58,29 @@ export default defineConfig({
         ]
       }
     })
-  ]
+  ],
+
+  base: './', 
+
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false, 
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+      }
+    }
+  },
+
+  server: {
+    host: true,
+    port: 5173
+  },
+
+  preview: {
+    port: 4173
+  }
 })

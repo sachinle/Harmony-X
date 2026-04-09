@@ -23,6 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 
+
+app/harmonyx.keystore
+
+*keytool
+
 # Environment variables
 .env
 .env.local
@@ -36,4 +41,7 @@ node_modules/
 dist/
 build/
 
+capacitor.config.cjs
 
+# Android Firebase config
+android/app/google-services.json

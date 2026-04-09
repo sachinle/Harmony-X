@@ -5,6 +5,7 @@ import SongCard from '../components/SongCard/SongCard'
 import SongCardSkeleton from '../components/SongCard/SongCardSkeleton'
 import { fetchSongs, fetchListeningHistory } from '../services/supabase'
 import { playSongFromPlaylist } from '../store/slices/playerSlice'
+import PullToRefresh from '../components/PullToRefresh/PullToRefresh'
 
 const getGreeting = () => {
   const h = new Date().getHours()
@@ -52,6 +53,8 @@ const Home = () => {
   }
 
   return (
+    <PullToRefresh onRefresh={loadData}>
+    <div className="px-8 pb-36 pt-2">
     <div className="px-8 pb-36 pt-2">
       <div className="mb-8">
         <h1 className="text-white text-3xl font-bold mb-6">
@@ -114,6 +117,8 @@ const Home = () => {
         </button>
       )}
     </div>
+    </div>
+    </PullToRefresh>
   )
 }
 
