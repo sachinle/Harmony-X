@@ -5,28 +5,25 @@ import { getAudioUrl } from '../services/storageService'
 import { useToast } from './useToast'
 import { store } from '../store'
 import {
-  setIsPlaying,
-  setCurrentTime,
-  setDuration,
-  setIsBuffering,
-  nextSong,
-  previousSong,
-  clearSleepTimer,
+  setIsPlaying, setCurrentTime, setDuration, setIsBuffering,
+  nextSong, previousSong, clearSleepTimer,
 } from '../store/slices/playerSlice'
+import {
+  getCachedAudio, cacheAudioFile, recordSongPlay,
+} from '../services/cacheService'
 import { addToListeningHistory } from '../services/supabase'
 
 export const useAudioPlayer = () => {
   const dispatch = useDispatch()
   const { showError } = useToast()
   const { currentSong, isPlaying, volume, quality, isDataSaverMode } =
-    useSelector((state) => state.player)
-  const { user } = useSelector((state) => state.user)
+    useSelector((s) => s.player)
+  const { user } = useSelector((s) => s.user)
 
-  // Wire audio-service events → Redux (once on mount)
+  // ── Wire audioService events → Redux (once on mount) ─────────────────────
   useEffect(() => {
     const onTime = (t) => {
       dispatch(setCurrentTime(t))
-      // Sleep timer check
       const { sleepTimerEnd } = store.getState().player
       if (sleepTimerEnd && Date.now() >= sleepTimerEnd) {
         audioService.pause()
@@ -42,9 +39,8 @@ export const useAudioPlayer = () => {
       dispatch(setIsPlaying(false))
       showError('Could not play this song. Audio file not found.')
     }
-    const onEnded     = ()  => {
+    const onEnded = () => {
       const { repeatMode, sleepTimerEnd } = store.getState().player
-      // Stop for sleep timer
       if (sleepTimerEnd && Date.now() >= sleepTimerEnd) {
         dispatch(setIsPlaying(false))
         dispatch(clearSleepTimer())
@@ -77,30 +73,54 @@ export const useAudioPlayer = () => {
     }
   }, [dispatch])
 
-  // Load & play whenever the current song or quality changes
+  // ── Load song: CACHE-FIRST, then network ──────────────────────────────────
   useEffect(() => {
-    if (!currentSong?.file_key && !currentSong?.audio_url) return
-    const q   = isDataSaverMode ? '32' : quality
-    const url = getAudioUrl(currentSong.file_key, q, currentSong.audio_url)
-    if (!url) return
-    audioService.loadSong(url, true)
-    if (user) {
-      addToListeningHistory(user.uid, currentSong.id).catch(() => {})
+    if (!currentSong?.id) return
+
+    const load = async () => {
+      // 1️⃣  Check IndexedDB / Cache API — works fully offline
+      const cachedUrl = await getCachedAudio(currentSong.id)
+      if (cachedUrl) {
+        audioService.loadSong(cachedUrl, true)
+        recordSongPlay(currentSong.id).catch(() => {})
+        if (user) addToListeningHistory(user.uid, currentSong.id).catch(() => {})
+        return
+      }
+
+      // 2️⃣  Nothing cached — need network
+      if (!navigator.onLine) {
+        showError("This song isn't saved for offline. Connect to internet to play it.")
+        dispatch(setIsPlaying(false))
+        return
+      }
+
+      // 3️⃣  Resolve the network URL
+      if (!currentSong.file_key && !currentSong.audio_url) return
+      const q   = isDataSaverMode ? '32' : quality
+      const url = getAudioUrl(currentSong.file_key, q, currentSong.audio_url)
+      if (!url) return
+
+      audioService.loadSong(url, true)
+      recordSongPlay(currentSong.id).catch(() => {})
+      if (user) addToListeningHistory(user.uid, currentSong.id).catch(() => {})
+
+      // 4️⃣  Background-cache for future offline use (fire-and-forget)
+      cacheAudioFile(currentSong.id, url, 4).catch(() => {})
     }
+
+    load()
   }, [currentSong?.id, quality, isDataSaverMode])
 
-  // Sync volume
+  // ── Sync volume ───────────────────────────────────────────────────────────
   useEffect(() => { audioService.setVolume(volume) }, [volume])
 
   const playPause    = useCallback(() => {
     audioService.isPlaying() ? audioService.pause() : audioService.play()
   }, [])
-
   const seek         = useCallback((time) => {
     audioService.seekTo(time)
     dispatch(setCurrentTime(time))
   }, [dispatch])
-
   const changeVolume = useCallback((v) => audioService.setVolume(v), [])
   const playNext     = useCallback(() => dispatch(nextSong()),     [dispatch])
   const playPrev     = useCallback(() => dispatch(previousSong()), [dispatch])
